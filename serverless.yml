@@ -1,0 +1,78 @@
+service: posts
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: us-east-1
+  stage: dev
+  memorySize: 128
+  timeout: 10
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Scan
+      - dynamodb:Query
+      - dynamodb:PutItem
+      - dynamodb:GetItem
+      - dynamodb:DeleteItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.dynamoTable}
+  environment:
+    DB_TABLE: ${self:custom.dynamoTable}
+
+resources:
+  Resources:
+    postsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.dynamoTable}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+functions:
+  list:
+    handler: handler.list
+    events:
+      - http:
+          method: get
+          path: /posts
+  get:
+    handler: handler.get
+    events:
+      - http:
+          method: get
+          path: /posts/{id}
+  create:
+    handler: handler.create
+    events:
+      - http:
+          method: post
+          path: /posts
+  update:
+    handler: handler.update
+    events:
+      - http:
+          method: put
+          path: /posts/{id}
+  delete:
+    handler: handler.delete
+    events:
+      - http:
+          method: delete
+          path: /posts/{id}
+  
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+  dynamoTable: posts
